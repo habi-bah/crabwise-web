@@ -1,189 +1,277 @@
-# Lumora Web
+# crabwise-web
 
-Lumora is an art marketplace on the **Stellar Network**. Artists list artwork and take commissions, buyers pay in XLM or any Stellar-based asset, and orders move through escrow, deliverables and payouts.
+**The web app for Crabwise, a Rust learning community on Stellar. Watch and download lessons, write Rust in the browser, earn XLM when your code passes, join staked study pods, chat with the community, trade, and ask an AI coach.**
 
-This repository is the Lumora web client - React + TypeScript on Vite with strict typing, ESLint, and Prettier.
+![License: MIT](https://img.shields.io/badge/License-MIT-green) ![Network: Stellar](https://img.shields.io/badge/Network-Stellar-blue) ![Framework: Next.js](https://img.shields.io/badge/Framework-Next.js_14-black) ![Language: TypeScript](https://img.shields.io/badge/Language-TypeScript-blue) ![Styling: Tailwind](https://img.shields.io/badge/Styling-TailwindCSS-38bdf8)
+
+> **Status:** early design and Testnet development. Routes and components below describe the target design. Items marked *planned* are not yet implemented.
+
+**Part of Crabwise:** crabwise-web (this repo) · [crabwise-api](https://github.com/your-org/crabwise-api) · [crabwise-contracts](https://github.com/your-org/crabwise-contracts)
+
+---
+
+## What is Crabwise?
+
+Learning Rust is hard, and most learners quit at the borrow checker. Crabwise connects tutors and learners in one app:
+
+- **Learn:** video courses and live sessions from tutors. Download lessons and study offline.
+- **Earn:** write Rust in the browser and earn XLM when your code passes the tutor's tests.
+- **Connect:** a social feed, forum, and chat for the Rust community.
+- **Trade:** swap assets on Stellar without leaving the app. Funds stay in your own wallet.
+- **Ask:** an AI coach that explains compiler errors, gives hints before answers, and summarises the latest crypto news with sources.
+
+### The two unique features
+
+1. **Proof of Compile.** Open a challenge, write your solution, and run the tests. When a sandboxed runner confirms they pass, your XLM reward unlocks. No waiting for manual grading.
+2. **Molt Pods.** Join a small cohort, stake a few XLM against weekly goals, and get your stake back plus a share of what dropouts forfeit. Part of the forfeits funds scholarships for learners who cannot afford courses.
+
+---
 
 ## Features
 
-- **Accounts** - email sign-up, sign-in and password reset with email verification, plus Stellar wallet connection and linked-wallet management (Freighter).
-- **Marketplace** - browse artwork by category, view artist profiles, favorite pieces, and check out with a Stellar payment.
-- **Listings** - artists create, edit and manage artwork listings with multi-asset pricing, and upload deliverables.
-- **Commissions & escrow** - orders are tracked through an escrow status flow from payment to delivery.
-- **Payments** - asset selection, wallet balance display, transaction signing, status polling and a payment result screen.
-- **Orders & earnings** - purchase history, order confirmation, transaction history and artist withdrawals.
-- **Profiles** - public artist pages with reviews, stats and favorites, and profile editing.
-- **Messaging & notifications** - behind the `VITE_FF_MESSAGING` and `VITE_FF_NOTIFICATIONS` feature flags.
-- **Theming** - light and dark themes driven by design tokens.
+### For Learners
+- Browse and search courses, preview lessons, and read reviews
+- Buy with XLM or USDC. Access is checked on-chain, and your purchase is yours
+- **Download lessons** (including a data-saver quality) and watch offline
+- In-browser Rust editor with run, test, and error explanations
+- Earn XLM from Proof of Compile challenges
+- Join Molt Pods and track weekly progress
+- Book live sessions with tutors
+- Tip posts and tutors with XLM
+
+### For Tutors
+- Tutor studio: create courses, upload videos, add lessons and quizzes
+- Build challenges with public and hidden tests, and fund the reward budget
+- Run Molt Pods as a curator
+- Set availability for live sessions
+- See earnings, ratings, and learner progress
+
+### For Everyone
+- Feed with posts, replies, reposts, likes, follows, and hashtags
+- Forum threads by topic, with accepted answers
+- Direct messages and course rooms
+- Trade page with quotes, price-impact warnings, and a vetted asset list
+- AI coach and a crypto news digest with sources
+- Light and dark themes, a data-saver mode, and keyboard-friendly navigation
+
+### AI Features
+| Feature | Where you see it |
+|---|---|
+| **Compiler Error Explainer** | Click "Explain" on any error in the editor |
+| **Hint Ladder** | Ask for a hint, then a bigger hint, then the answer. Graded challenges can be set to hints only |
+| **Course Q&A** | Ask a question inside a lesson and get an answer linked to the exact lesson |
+| **Code Review** | Paste or select code for a review of style and safety |
+| **Study Plan** | Tell the coach your goal and time, get a weekly plan |
+| **Crypto News Digest** | Short summaries with links to the original articles and timestamps |
+
+The coach never gives financial advice and never decides a reward. News summaries are labelled as AI-generated.
+
+---
 
 ## Routes
 
-Routes are declared in `src/App.tsx`. "Auth" means the route is wrapped in `RequireAuth`; "Guest" means it is only
-for signed-out users. `src/docs.test.ts` fails if this table and the router drift apart.
+| Route | Description |
+|---|---|
+| `/` | Landing page and trending courses |
+| `/courses` | Browse and search courses |
+| `/courses/[id]` | Course details, preview, reviews, and buy button |
+| `/learn/[courseId]` | Course player with lessons, downloads, and notes |
+| `/challenges` | Proof of Compile challenges |
+| `/challenges/[id]` | Editor, run tests, submit, and claim reward |
+| `/pods` | Open Molt Pods |
+| `/pods/[id]` | Goals, members, standings, and contest form |
+| `/tutors` | Find tutors |
+| `/tutors/[address]` | Tutor profile, courses, and booking |
+| `/sessions` | Your upcoming and past sessions |
+| `/feed` | Home timeline |
+| `/forum` | Topics and threads |
+| `/messages` | Direct messages and course rooms |
+| `/trade` | Swap assets from your wallet |
+| `/coach` | AI coach |
+| `/news` | Crypto news digest |
+| `/studio` | Tutor studio (courses, videos, challenges, pods) |
+| `/wallet` | Balances, rewards, tips, and transaction history |
+| `/downloads` | Offline library |
+| `/settings` | Profile, language, data-saver, and notifications |
 
-| Path                               | Access | Screen                   |
-| ---------------------------------- | ------ | ------------------------ |
-| `/`                                | Public | Landing page             |
-| `/login`                           | Guest  | Sign in                  |
-| `/register`                        | Guest  | Create an account        |
-| `/forgot-password`                 | Guest  | Request a password reset |
-| `/reset-password`                  | Guest  | Set a new password       |
-| `/verify-email`                    | Public | Verify an email address  |
-| `/artists/:username`               | Public | Artist profile           |
-| `/category/:slug`                  | Public | Category landing page    |
-| `/profile/edit`                    | Auth   | Edit your profile        |
-| `/dashboard`                       | Auth   | Dashboard                |
-| `/artist`                          | Artist | Artist dashboard         |
-| `/artist/listings`                 | Auth   | My listings              |
-| `/artist/listings/new`             | Auth   | Create a listing         |
-| `/artist/listings/:listingId/edit` | Auth   | Edit a listing           |
-| `/checkout/:artworkId`             | Auth   | Checkout                 |
-| `/payment/result`                  | Auth   | Payment result           |
-| `/order/confirmation`              | Auth   | Order confirmation       |
-| `/purchases`                       | Auth   | Purchase history         |
-| `/favorites`                       | Auth   | Favorites                |
-| `/transactions`                    | Auth   | Transaction history      |
-| `/earnings/withdraw`               | Auth   | Withdraw earnings        |
-| `/settings/wallets`                | Auth   | Linked wallets           |
-| `/style-guide`                     | Dev only | Design system reference |
-| `*`                                | Public | Not found                |
-
-## Tech Stack
-
-- **React 19** + **TypeScript** (strict, with unchecked indexed access disallowed)
-- **Vite** for the dev server and production builds
-- **Tailwind CSS** (PostCSS + Autoprefixer) with a tokenized theme
-- **ESLint** (flat config) + **Prettier** for linting and formatting
-- `@/` path alias mapped to `src/`
-
-## Getting Started
-
-Requirements: Node.js `^20.19.0` or `>=22.12.0`, and npm.
-
-```bash
-npm install
-npm run dev
-```
-
-The app is served at `http://localhost:5173`.
-
-## Scripts
-
-| Script                 | Description                                                                       |
-| ---------------------- | --------------------------------------------------------------------------------- |
-| `npm run dev`          | Start the Vite dev server with HMR                                                |
-| `npm run build`        | Build the production bundle with Vite (run `type-check` separately)               |
-| `npm run preview`      | Serve the production build locally                                                |
-| `npm run lint`         | Lint the codebase with ESLint                                                     |
-| `npm run format`       | Format the codebase with Prettier                                                 |
-| `npm run format:check` | Check formatting without writing (CI-friendly)                                    |
-| `npm run type-check`   | Run `tsc -b` (a project-references build)                                         |
-| `npm run test`         | Run the Vitest unit and component tests once                                      |
-| `npm run test:watch`   | Run Vitest in watch mode                                                          |
-| `npm run test:coverage`| Run the tests once and collect a coverage report                                  |
-| `npm run check`        | Run every gate CONTRIBUTING.md mandates (lint, format, types, test, build)        |
-| `npm run prepare`      | Installs the Husky git hooks (runs automatically on `npm install` / `npm ci`)     |
-
-## Environment Variables
-
-Runtime configuration is centralized in `src/config/env.ts` and parsed with [Zod](https://zod.dev). All variables use
-the `VITE_` prefix and are defined in a `.env` file - copy `.env.example` to get started.
-
-> **Warning: every `VITE_*` value is public.** Vite inlines these values into the client bundle at build time, so
-> anyone who loads the site can read them. Never put a secret (API keys, signing keys, passwords) in a `VITE_*`
-> variable; secrets belong on a server.
-
-| Variable                   | Dev default             | Required           | Description                                                   |
-| -------------------------- | ----------------------- | ------------------ | ------------------------------------------------------------- |
-| `VITE_API_URL`             | `http://localhost:4000` | Yes                | Base URL of the Lumora backend API. Must be `https://` in prod |
-| `VITE_STELLAR_NETWORK`     | `testnet`               | Yes                | Stellar network: `testnet` or `mainnet`                       |
-| `VITE_APP_URL`             | `http://localhost:5173` | Yes                | Public URL the web app is served from                         |
-| `VITE_FF_MESSAGING`        | unset (flag is off)     | No                 | Feature flag override for messaging: `true` or `false`        |
-| `VITE_FF_NOTIFICATIONS`    | unset (flag is off)     | No                 | Feature flag override for notifications: `true` or `false`    |
-| `VITE_FF_ADVANCED_FILTERS` | unset (flag is off)     | No                 | Feature flag override for advanced filters: `true` or `false` |
-
-The three required variables fall back to the dev defaults above **only while developing**. A production build has no
-fallback: set all three explicitly in your deployment environment.
-
-The flag variables accept only `true` or `false`; anything else counts as unset, which leaves the flag at its safe
-default (off). See `src/config/featureFlags.ts`.
-
-### How validation actually behaves
-
-`src/config/env.ts` resolves the configuration once and exposes the outcome as `loadResult` (`env`, `configError`,
-`invalidKeys`). It never throws at module scope, so an invalid build reaches `main.tsx` and renders
-`ConfigErrorScreen`, which lists the offending variable names:
-
-- **Development (`npm run dev`)**: an unset required variable falls back to the dev default; a value that is present
-  but invalid (a malformed URL, an unknown network) is reported and `main.tsx` renders `ConfigErrorScreen`. The dev
-  server itself still starts; it is the page that refuses to render.
-- **Production builds**: a missing `VITE_API_URL`, `VITE_STELLAR_NETWORK` or `VITE_APP_URL` **fails closed** — the app
-  renders `ConfigErrorScreen` rather than silently starting against `localhost` or `testnet`.
-- **Production builds** additionally reject an `http://` `VITE_API_URL`: session tokens would otherwise travel over
-  the wire in plaintext.
-
-The supported network passphrases are an explicit allow-list (`SUPPORTED_NETWORK_PASSPHRASES` in
-`src/config/stellar.ts`), so a wallet that reports an unknown network is refused rather than producing a transaction
-that can never settle.
-
-`.env` is git-ignored; only `.env.example` is committed. Never read `import.meta.env` directly outside
-`src/config/env.ts` - import `{ env }` from `@/config` instead.
-
-## Design System & Theming
-
-Styling is built on a tokenized Tailwind theme so every color, radius, shadow, and type size comes from a design token instead of an ad-hoc value.
-
-- **Semantic colors** (`bg-background`, `text-foreground`, `border-line`, `bg-primary`, ...) are CSS variables defined in `src/index.css` in two palettes - light and dark. Dark mode is activated via `data-theme="dark"` on `<html>`.
-- **Brand palettes** (`brand-purple-*`, `brand-gold-*`, `neutral-*`) are exposed as utilities such as `bg-brand-purple-600`, `bg-brand-gold-500`, `bg-neutral-900`.
-- **Typography** uses a single ramp (`text-display`, `text-h1` … `text-caption-sm`) defined in `tailwind.config.ts`, applied to headings automatically; sizes are fluid between mobile and desktop.
-- **Radii & shadows**: `rounded-control`, `rounded-card`, `shadow-card`, `shadow-elevated`, `shadow-focus-ring`.
-- **Container**: use `container` for a centered, padded layout with responsive max widths.
-
-### Theming
-
-The theme is resolved before first paint by the inline script in `index.html` (no flash) and managed at runtime by `ThemeProvider`:
-
-- First visit follows the OS preference via `prefers-color-scheme`.
-- `ThemeToggle` switches light/dark and persists the choice in `localStorage` under `lumora-theme`.
-- The choice survives reloads; `useTheme()` (`@/components/ui`) exposes `theme`, `setTheme`, and `toggleTheme`.
-
-Never use raw hex values in components - import tokens from `@/components/ui` or `@/lib/theme` and style with the utility classes above.
-
-## Editor Integrations
-
-VS Code: accept the recommended extensions when prompted (also pinned in `.vscode/extensions.json`):
-
-- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
-- [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
-
-`.vscode/settings.json` sets Prettier as the default formatter and enables format-on-save plus ESLint autofix, so saved files always match `npm run format:check`.
-
-Other editors (WebStorm, Neovim, etc.): enable "Format on save" with Prettier and point the ESLint plugin at the flat config at `eslint.config.js`.
+---
 
 ## Project Structure
 
-The codebase is organized by feature - each domain is self-contained:
-
 ```
-src/
-├── components/ui/     # Shared, presentational design-system components
-├── config/            # App configuration (env, constants)
-├── features/          # Feature modules (auth, portfolio, marketplace, ...)
-├── hooks/             # Cross-feature React hooks
-├── lib/               # Framework-agnostic utilities
-├── services/          # API clients and external integrations
-├── stores/            # Global state stores
-└── types/             # Shared TypeScript types
+crabwise-web/
+├── app/                          # Next.js 14 App Router
+│   ├── (marketing)/
+│   ├── courses/
+│   ├── learn/
+│   ├── challenges/
+│   ├── pods/
+│   ├── tutors/
+│   ├── feed/
+│   ├── forum/
+│   ├── messages/
+│   ├── trade/
+│   ├── coach/
+│   ├── news/
+│   ├── studio/
+│   └── wallet/
+├── components/
+│   ├── editor/                   # Monaco editor, run panel, error explainer
+│   ├── player/                   # Video player, offline controls
+│   ├── pods/                     # Pod cards, standings, contest form
+│   ├── feed/                     # Post composer, timeline, tip button
+│   ├── trade/                    # Swap form, price-impact warning
+│   ├── coach/                    # Chat UI, hint ladder
+│   └── ui/                       # Shared primitives (shadcn/ui)
+├── lib/
+│   ├── stellar/                  # Wallet kit, transaction builders, Horizon helpers
+│   ├── contracts/                # Typed clients for crabwise-contracts
+│   ├── api/                      # Typed API client for crabwise-api
+│   ├── offline/                  # Service worker helpers, IndexedDB, WebCrypto
+│   └── i18n/                     # Translations (planned)
+├── public/
+├── tests/                        # Vitest and Playwright tests
+├── .env.example
+└── README.md                     <- you are here
+```
+**Stack:** Next.js 14, TypeScript, TailwindCSS, shadcn/ui, TanStack Query, Zustand, Monaco Editor, Stellar Wallets Kit (Freighter, LOBSTR, xBull), @stellar/stellar-sdk, Service Worker, IndexedDB, Vitest, Playwright
+
+---
+
+## Key Flows
+
+### Buy and download a course
+1. Connect a Stellar wallet.
+2. Press **Buy**. The app builds a `CourseMarket.purchase` transaction and your wallet signs it.
+3. The app checks `has_access` and unlocks the lessons.
+4. Press **Download** on a lesson. The app fetches a signed link and a device-bound licence key from the backend, stores the encrypted file in the browser, and decrypts it in memory for offline playback.
+
+### Earn XLM with Proof of Compile
+1. Open a challenge and write Rust in the editor.
+2. **Run** to test against the public tests. This is a practice run with no reward.
+3. **Submit** for a reward-eligible run. The backend sandbox runs the tests and the runner attests the result on-chain.
+4. When the result shows **Passed**, press **Claim**. The contract pays the reward to your wallet.
+
+### Join a Molt Pod
+1. Open a pod and read the goals, stake, and schedule.
+2. **Join** and stake the exact amount before the pod starts.
+3. Track weekly progress and live standings. If an attestation looks wrong, **Contest** it inside the contest window.
+4. After the pod ends, **Claim** your stake and any share of forfeits.
+
+### Swap on the Trade page
+1. Choose assets from the vetted list. The app adds a trustline if needed.
+2. See the quote, path, price impact, and slippage setting.
+3. Your wallet signs the swap. Crabwise never holds your funds, and trading is risky.
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js 20 or later
+- pnpm 9 or later
+- A Stellar wallet (Freighter, LOBSTR, or xBull) set to Testnet
+- A running [crabwise-api](https://github.com/your-org/crabwise-api) (or the hosted Testnet API)
+
+### Install
+```bash
+git clone https://github.com/your-org/crabwise-web.git
+cd crabwise-web
+pnpm install
+cp .env.example .env.local
 ```
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for placement rules and conventions.
+### Environment variables
+```
+NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_STELLAR_NETWORK=testnet
+NEXT_PUBLIC_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+NEXT_PUBLIC_HORIZON_URL=https://horizon-testnet.stellar.org
+NEXT_PUBLIC_CONTRACT_TUTOR_REGISTRY=...
+NEXT_PUBLIC_CONTRACT_COURSE_MARKET=...
+NEXT_PUBLIC_CONTRACT_COMPILE_VAULT=...
+NEXT_PUBLIC_CONTRACT_MOLT_POD=...
+```
 
-## Community & Security
+### Run
+```bash
+pnpm dev          # http://localhost:3000
+pnpm build        # Production build
+pnpm start
+```
 
-- [Code of Conduct](./CODE_OF_CONDUCT.md)
-- [Security policy](./SECURITY.md) - report vulnerabilities privately, never in a public issue
-- [Changelog](./CHANGELOG.md)
+### Test
+```bash
+pnpm test         # Unit tests (Vitest)
+pnpm test:e2e     # End-to-end tests (Playwright)
+pnpm lint
+pnpm typecheck
+```
+
+---
+
+## Design Notes
+
+- **Low bandwidth first.** Data-saver mode loads small images, 240p video, and skips autoplay. Pages work on slow connections.
+- **Offline.** Downloaded lessons play without a connection. Editor runs need a connection because the sandbox is server-side.
+- **Accessible.** Keyboard navigation, visible focus states, captions on videos, and sufficient colour contrast.
+- **Safe by default.** Every signing request shows a plain-language summary of what the transaction does before the wallet opens.
+- **Clear risk wording.** Trade and pod screens state plainly that funds can be lost and that nothing is financial advice.
+
+---
+
+## Security
+
+- The app never sees private keys. All signing happens in the user's wallet.
+- Downloaded videos are stored encrypted, and keys are bound to the device.
+- User-generated content is sanitised before it is rendered.
+- Learner code is only ever executed in the backend sandbox, never in the browser's main context.
+- Responsible disclosure: `security@your-domain.example`
+
+---
+
+## Roadmap
+
+| Phase | Milestone |
+|---|---|
+| 1 | Wallet login, course browsing, and purchase flow on Testnet |
+| 2 | Course player with offline downloads |
+| 3 | Editor and Proof of Compile challenges |
+| 4 | Feed, forum, and messages |
+| 5 | Molt Pods, AI coach, news, and Trade page |
+| 6 | Tutor studio, translations, accessibility audit, and Mainnet launch |
+
+---
+
+## Planned Issues for Contributors
+
+| Type | Examples |
+|---|---|
+| **Bug fixes** | Wallet reconnect on refresh, offline playback on Safari, editor layout on small screens, timeline scroll jumps |
+| **New features** | Course filters, pod standings chart, dark mode polish, post composer with code blocks, tip button, notification centre |
+| **UI and design** | Empty states, loading skeletons, mobile layouts, crab-themed illustrations and badges |
+| **Accessibility** | Keyboard focus order, screen-reader labels, video captions, colour-contrast fixes |
+| **Translations** | Add the interface in Hausa, Yoruba, Igbo, French, or Portuguese |
+| **Testing** | Playwright flows for buy, run, submit, and claim; unit tests for transaction builders |
+| **Documentation** | Component docs, contribution guide, wallet setup guide, design tokens |
+| **Good first issues** | Typos, copy edits, icons, README examples, small component fixes |
+
+Every issue has a description, acceptance criteria, and a pointer to the relevant files.
+
+---
+
+## Contributing
+
+```bash
+git checkout -b feat/your-feature
+pnpm lint && pnpm typecheck && pnpm test
+# open a PR against main
+```
+See `CONTRIBUTING.md`.
 
 ## License
+MIT, 2026 Crabwise Contributors
 
-Licensed under the [MIT License](./LICENSE).
+---
+
+*Built on Stellar. Learn Rust, wisely.*
