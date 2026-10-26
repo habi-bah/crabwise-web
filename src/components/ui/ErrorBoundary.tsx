@@ -1,7 +1,7 @@
 import { Component, Fragment, type ErrorInfo, type ReactNode } from 'react'
 import { reportError, type ErrorReporter } from '@/lib/analytics'
 
-const ISSUES_BASE_URL = 'https://github.com/Dfunder/stellarAid-web/issues/new'
+const ISSUES_BASE_URL = 'https://github.com/Dfunder/crabwise-web/issues/new'
 
 interface ErrorBoundaryProps {
   children: ReactNode

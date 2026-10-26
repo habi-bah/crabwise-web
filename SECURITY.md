@@ -22,7 +22,7 @@ Report it privately with GitHub's private vulnerability reporting:
 
 1. Go to the repository's **Security** tab.
 2. Choose **Report a vulnerability**
-   ([direct link](https://github.com/Dfunder/stellarAid-web/security/advisories/new)).
+   ([direct link](https://github.com/Dfunder/crabwise-web/security/advisories/new)).
 3. Describe the issue, how to reproduce it, and the impact you expect.
 
 If you cannot use the form, contact the maintainers privately through the

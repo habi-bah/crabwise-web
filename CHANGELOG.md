@@ -37,5 +37,5 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   profile, messaging, notifications and transactions.
 - Typed environment configuration and feature flags.
 
-[Unreleased]: https://github.com/Dfunder/stellarAid-web/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/Dfunder/stellarAid-web/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Dfunder/crabwise-web/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Dfunder/crabwise-web/releases/tag/v0.1.0
