@@ -44,6 +44,8 @@ export { authKeys } from './queryKeys'
 
 export { authApi } from './services/authApi'
 export { authService } from './services/authService'
+
+export { passwordSchema, resetPasswordSchema, getPasswordIssues, getPasswordStrength, MIN_PASSWORD_LENGTH, PASSWORD_MAX_LENGTH, type ResetPasswordFormValues, type ResetPasswordFormInput } from './utils'
 export { bindSessionToHttp } from './services/session'
 export { WalletError, isWalletError, walletAdapters } from './services/wallets'
 export type { WalletAdapter, WalletErrorCode } from './services/wallets'

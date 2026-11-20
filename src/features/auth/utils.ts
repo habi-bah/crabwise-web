@@ -8,6 +8,8 @@ export { DEFAULT_AUTHENTICATED_PATH, resolvePostLoginRedirect, safeRedirect } fr
 
 export const MIN_PASSWORD_LENGTH = 8
 
+export const PASSWORD_MAX_LENGTH = 128
+
 /** Password rules enforced by the reset form (and any future sign-up form). */
 export const passwordSchema = z
   .string()
@@ -15,6 +17,36 @@ export const passwordSchema = z
   .regex(/[a-z]/, 'Add a lowercase letter.')
   .regex(/[A-Z]/, 'Add an uppercase letter.')
   .regex(/\d/, 'Add a number.')
+
+/**
+ * Rules for choosing a new password from a reset link. This is the schema the
+ * reset form validates against (#140), so it must be the single source of
+ * truth for both client-side feedback and any future server-side mirror.
+ */
+export const resetPasswordSchema = z
+  .object({
+    password: passwordSchema.max(
+      PASSWORD_MAX_LENGTH,
+      'Password must be at most 128 characters.',
+    ),
+    confirmPassword: z
+      .string()
+      .min(1, 'Please confirm your new password.')
+      .max(PASSWORD_MAX_LENGTH, 'Your confirmation is too long.'),
+  })
+  .refine(
+    (values) => values.password === values.confirmPassword,
+    {
+      path: ['confirmPassword'],
+      message: 'Passwords do not match.',
+    },
+  )
+
+/** The shape produced by {@link resetPasswordSchema}. */
+export type ResetPasswordFormValues = z.output<typeof resetPasswordSchema>
+
+/** The input accepted by {@link resetPasswordSchema}. */
+export type ResetPasswordFormInput = z.input<typeof resetPasswordSchema>
 
 export const emailSchema = z.email('Enter a valid email address.')
 
