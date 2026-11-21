@@ -54,7 +54,10 @@ export const STICK_TO_BOTTOM_THRESHOLD_PX = 120
  * the user is not looking at the thread, so a backgrounded tab does not keep
  * hitting the API.
  */
-export function pollIntervalFor(options: { isFocused: boolean; isActive: boolean }): number | false {
+export function pollIntervalFor(options: {
+  isFocused: boolean
+  isActive: boolean
+}): number | false {
   if (!options.isActive) return false
   if (!options.isFocused) return false
   return POLL_INTERVAL_MS
@@ -93,9 +96,14 @@ export function dayLabel(key: string, now: Date): string {
  * order the transcript renders top-to-bottom. Messages with an unparseable
  * timestamp are dropped rather than placed in a bogus "Invalid date" segment.
  */
-export function groupMessagesByDay(messages: readonly ConversationMessage[], now: Date): DaySegment[] {
+export function groupMessagesByDay(
+  messages: readonly ConversationMessage[],
+  now: Date,
+): DaySegment[] {
   const valid = messages
-    .filter((message) => message.createdAt instanceof Date && !Number.isNaN(message.createdAt.getTime()))
+    .filter(
+      (message) => message.createdAt instanceof Date && !Number.isNaN(message.createdAt.getTime()),
+    )
     .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
 
   const segments: DaySegment[] = []
@@ -129,6 +137,24 @@ export function preserveScrollTop(
   return Math.max(0, scrollTop + growth)
 }
 
+/**
+ * Whether `next` now holds older history that `previous` did not.
+ *
+ * A prepend is the only change that grows the content *above* the viewport, so
+ * it is the only change that needs the scroll-anchor correction. A message
+ * appended at the bottom must never move a reader who has scrolled away from
+ * it. An initial load and a different conversation both return `false`: in
+ * neither case is the reader holding on to an anchored message.
+ */
+export function hasPrependedHistory(
+  previous: readonly Pick<ConversationMessage, 'id'>[],
+  next: readonly Pick<ConversationMessage, 'id'>[],
+): boolean {
+  const anchor = previous[0]
+  if (!anchor) return false
+  return next.findIndex((message) => message.id === anchor.id) > 0
+}
+
 /** Distance from the bottom of the content, floored at zero. */
 export function distanceFromBottom(
   scrollTop: number,
@@ -151,6 +177,27 @@ export function shouldStickToBottom(
   threshold: number = STICK_TO_BOTTOM_THRESHOLD_PX,
 ): boolean {
   return distanceFromBottom(scrollTop, viewportHeight, contentHeight) <= threshold
+}
+
+/** What the transcript should show for its current data. */
+export type ConversationStatus = 'loading' | 'error' | 'empty' | 'ready'
+
+/**
+ * Separates "still loading", "failed to load" and "loaded, but empty".
+ *
+ * The order is deliberate: a failed request must not be reported as an empty
+ * conversation, and a slow first page must not briefly look empty either. Only
+ * a settled, successful load with no messages is `empty`.
+ */
+export function conversationStatusFor(options: {
+  isLoading: boolean
+  hasError: boolean
+  messageCount: number
+}): ConversationStatus {
+  if (options.hasError) return 'error'
+  if (options.isLoading) return 'loading'
+  if (options.messageCount === 0) return 'empty'
+  return 'ready'
 }
 
 /** Time formatted for a bubble, e.g. `14:05`. */

@@ -1,3 +1,4 @@
+import { safeExternalUrl } from '@/lib'
 import type { LinkPreview, Message, MessageAttachment, MessageDraft } from './types'
 
 /** Longest body the composer will send, mirroring the API's column limit. */
@@ -9,20 +10,24 @@ export const MAX_ATTACHMENTS = 4
 /** Longest attachment label rendered; the rest is elided. */
 const MAX_ATTACHMENT_NAME_LENGTH = 60
 
-/**
- * Schemes a preview link may navigate to.
- *
- * A message body is attacker-controlled whenever a thread involves someone the
- * user does not know, so a preview must never become a `javascript:` or
- * `data:` navigation. Anything not on this list renders as text with no link.
- */
-const SAFE_PROTOCOLS = new Set(['http:', 'https:'])
-
 /** Bare-domain candidate (`www.`) or explicit URL. Stops at whitespace and markup. */
 const URL_PATTERN = /(?:https?:\/\/|www\.)[^\s<>"'`]+/i
 
 /** Punctuation that commonly ends a sentence rather than a URL. */
 const TRAILING_PUNCTUATION = /[.,;:!?)\]}'"]+$/
+
+/**
+ * Characters that cannot be rendered as visible text and can make a message
+ * read differently from its bytes: C0/C1 controls (newlines and tabs are
+ * kept), zero-width spaces, bidi embeddings/overrides/isolates, and the BOM.
+ *
+ * ZWNJ/ZWJ (U+200C/U+200D) are deliberately kept: they are meaningful in
+ * Persian and Arabic text and in emoji sequences.
+ */
+/* eslint-disable no-control-regex -- intentional control-character filtering */
+const INVISIBLE_TEXT_CHARS =
+  /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g
+/* eslint-enable no-control-regex */
 
 export type SendIntent = 'send' | 'newline' | 'ignore'
 
@@ -40,9 +45,22 @@ export function sendIntentForKey(key: string, shiftKey: boolean, isComposing: bo
   return shiftKey ? 'newline' : 'send'
 }
 
+/**
+ * Makes an untrusted message body readable when it is rendered as text.
+ *
+ * Markup is deliberately *not* stripped: `<b>hi</b>` stays the literal text
+ * the sender typed, and React escapes it on output, so it can never be
+ * interpreted as HTML. Line endings are normalised, and invisible characters
+ * that could reorder or disguise the visible text are removed so what is read
+ * matches what is stored.
+ */
+export function sanitizeMessageBody(body: string): string {
+  return body.replace(/\r\n?/g, '\n').replace(INVISIBLE_TEXT_CHARS, '')
+}
+
 /** Trims a draft body for sending. Returns `''` for whitespace-only input. */
 export function normalizeBody(body: string): string {
-  return body.replace(/\r\n/g, '\n').trim()
+  return sanitizeMessageBody(body).trim()
 }
 
 /**
@@ -64,23 +82,15 @@ export function remainingLength(body: string): number {
 /**
  * Whether a raw URL may be used as an `href`.
  *
- * Rejects unparseable input, any scheme outside {@link SAFE_PROTOCOLS}, and
- * embedded credentials (`https://user:pass@host`), which are both a phishing
- * vector and a way to leak a secret through a link the user did not write.
+ * Delegates to the app-wide external-URL policy: only `https:` is accepted in
+ * production (`http:` is a development convenience), the URL must be absolute
+ * and host-bearing, and embedded credentials (`https://user:pass@host`),
+ * backslashes, control characters or surrounding whitespace are refused. The
+ * last two matter here because a browser normalises them away, so the link a
+ * reader sees could otherwise differ from the one in the DOM.
  */
 export function isSafePreviewUrl(raw: string): boolean {
-  const trimmed = raw.trim()
-  if (trimmed === '') return false
-
-  let parsed: URL
-  try {
-    parsed = new URL(trimmed)
-  } catch {
-    return false
-  }
-
-  if (!SAFE_PROTOCOLS.has(parsed.protocol)) return false
-  return parsed.username === '' && parsed.password === ''
+  return safeExternalUrl(raw) !== null
 }
 
 function toAbsoluteUrl(raw: string): string {
@@ -102,8 +112,9 @@ export function extractLinkPreview(body: string): LinkPreview | null {
   const url = candidate.replace(TRAILING_PUNCTUATION, '')
   if (url === '') return null
 
-  const absolute = toAbsoluteUrl(url)
-  return { url, href: isSafePreviewUrl(absolute) ? absolute : null }
+  // `safeExternalUrl` returns the normalised URL, so the checked value and the
+  // value placed in `href` are the same string rather than two parse results.
+  return { url, href: safeExternalUrl(toAbsoluteUrl(url)) }
 }
 
 function isNonEmptyString(value: unknown): value is string {

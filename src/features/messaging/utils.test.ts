@@ -14,6 +14,7 @@ import {
   isSafePreviewUrl,
   normalizeAttachments,
   normalizeBody,
+  sanitizeMessageBody,
   remainingLength,
   retryPending,
   retryableIds,
@@ -64,6 +65,11 @@ describe('canSend', () => {
   it('accepts a trimmed body', () => {
     expect(canSend('  hi  ')).toBe(true)
     expect(normalizeBody('  hi  ')).toBe('hi')
+    expect(normalizeBody('  <b>hi</b>\u202E  ')).toBe('<b>hi</b>')
+  })
+
+  it('rejects a body made only of invisible characters', () => {
+    expect(canSend('\u200B\u202E\uFEFF')).toBe(false)
   })
 
   it('rejects a body over the length limit', () => {
@@ -101,6 +107,17 @@ describe('isSafePreviewUrl', () => {
     expect(isSafePreviewUrl('   ')).toBe(false)
     expect(isSafePreviewUrl('not a url')).toBe(false)
   })
+
+  it('rejects values a browser would normalise into a different link', () => {
+    // The visible string and the parsed URL must not disagree: whitespace,
+    // control characters and backslashes are reinterpreted by browsers.
+    expect(isSafePreviewUrl(' https://example.com')).toBe(false)
+    expect(isSafePreviewUrl('https://example.com ')).toBe(false)
+    expect(isSafePreviewUrl('https://exa\nmple.com')).toBe(false)
+    expect(isSafePreviewUrl('https://example.com\\@evil.example')).toBe(false)
+    expect(isSafePreviewUrl('https:///path')).toBe(false)
+    expect(isSafePreviewUrl('//example.com')).toBe(false)
+  })
 })
 
 describe('extractLinkPreview', () => {
@@ -109,10 +126,10 @@ describe('extractLinkPreview', () => {
     expect(preview).toEqual({ url: 'https://example.com/a?b=1', href: 'https://example.com/a?b=1' })
   })
 
-  it('upgrades a bare www host to https', () => {
+  it('upgrades a bare www host to https and returns the normalised href', () => {
     expect(extractLinkPreview('see www.example.com')).toEqual({
       url: 'www.example.com',
-      href: 'https://www.example.com',
+      href: 'https://www.example.com/',
     })
   })
 
@@ -130,6 +147,24 @@ describe('extractLinkPreview', () => {
     // never promoted to a link. Not linking it is strictly safer than linking
     // it without an href.
     expect(extractLinkPreview('javascript:alert(1)')).toBeNull()
+    expect(extractLinkPreview('[x](javascript:alert(1))')).toBeNull()
+    expect(extractLinkPreview('mailto:hi@example.com')).toBeNull()
+  })
+
+  it('leaves markup-shaped text as text', () => {
+    expect(extractLinkPreview('<script>alert(1)</script>')).toBeNull()
+    expect(extractLinkPreview('<b>hello</b>')).toBeNull()
+  })
+
+  it('normalises the href so the displayed url and the destination agree', () => {
+    expect(extractLinkPreview('HTTPS://EXAMPLE.COM/Path')?.href).toBe('https://example.com/Path')
+  })
+
+  it('stops the url at markup so it cannot become part of the destination', () => {
+    expect(extractLinkPreview('https://example.com/path"onmouseover="alert(1)')).toEqual({
+      url: 'https://example.com/path',
+      href: 'https://example.com/path',
+    })
   })
 
   it('keeps a detected link whose href fails the allowlist as text', () => {
@@ -142,8 +177,37 @@ describe('extractLinkPreview', () => {
   })
 })
 
+describe('sanitizeMessageBody', () => {
+  it('keeps markup as literal text instead of interpreting it', () => {
+    expect(sanitizeMessageBody('<b>bold</b>')).toBe('<b>bold</b>')
+    expect(sanitizeMessageBody('<img src=x onerror=alert(1)>')).toBe('<img src=x onerror=alert(1)>')
+  })
+
+  it('normalises line endings and keeps meaningful whitespace', () => {
+    expect(sanitizeMessageBody('a\r\nb\rc')).toBe('a\nb\nc')
+    expect(sanitizeMessageBody('one  two\tthree')).toBe('one  two\tthree')
+  })
+
+  it('removes controls and invisible bidi characters that can disguise text', () => {
+    expect(sanitizeMessageBody('pay\u202Eevil\u0000')).toBe('payevil')
+    expect(sanitizeMessageBody('a\u200Bb\uFEFFc')).toBe('abc')
+  })
+
+  it('keeps joiners that carry meaning in scripts and emoji', () => {
+    // ZWNJ in Persian and ZWJ in a family emoji are content, not noise.
+    expect(sanitizeMessageBody('می\u200Cخواهم')).toContain('\u200C')
+    expect(sanitizeMessageBody('👨\u200D👩\u200D👧')).toContain('\u200D')
+  })
+})
+
 describe('normalizeAttachments', () => {
-  const valid = { id: 'a1', name: 'receipt.pdf', size: 2048, contentType: 'application/pdf', url: 'https://cdn.example.com/a1' }
+  const valid = {
+    id: 'a1',
+    name: 'receipt.pdf',
+    size: 2048,
+    contentType: 'application/pdf',
+    url: 'https://cdn.example.com/a1',
+  }
 
   it('accepts a well-formed payload', () => {
     expect(normalizeAttachments([valid])).toEqual([valid])
@@ -166,7 +230,9 @@ describe('normalizeAttachments', () => {
   it('coerces a numeric string size and defaults an unusable one to zero', () => {
     expect(normalizeAttachments([{ ...valid, size: '512' }])[0]?.size).toBe(512)
     expect(normalizeAttachments([{ ...valid, size: -5 }])[0]?.size).toBe(0)
-    expect(normalizeAttachments([{ ...valid, contentType: '' }])[0]?.contentType).toBe('application/octet-stream')
+    expect(normalizeAttachments([{ ...valid, contentType: '' }])[0]?.contentType).toBe(
+      'application/octet-stream',
+    )
   })
 
   it('caps the chip count so a malformed payload cannot render unbounded UI', () => {
@@ -205,16 +271,22 @@ describe('optimistic send lifecycle', () => {
       { ...DRAFT, body: '  Hello there  ' },
       { id: 'p1', senderId: 'me', createdAt: AT },
     )
-    expect(message).toMatchObject({ id: 'p1', body: 'Hello there', status: 'sending', senderId: 'me' })
+    expect(message).toMatchObject({
+      id: 'p1',
+      body: 'Hello there',
+      status: 'sending',
+      senderId: 'me',
+    })
   })
 
   it('appends a pending message in chronological order', () => {
     const older = sent('s0', new Date('2026-01-01T09:00:00.000Z'))
     expect(appendPending([older], pending('p1')).map((m) => m.id)).toEqual(['s0', 'p1'])
-    expect(appendPending([sent('s2', new Date('2026-01-01T11:00:00.000Z'))], pending('p1')).map((m) => m.id)).toEqual([
-      's2',
-      'p1',
-    ])
+    expect(
+      appendPending([sent('s2', new Date('2026-01-01T11:00:00.000Z'))], pending('p1')).map(
+        (m) => m.id,
+      ),
+    ).toEqual(['s2', 'p1'])
   })
 
   it('does not duplicate a message that is already present', () => {

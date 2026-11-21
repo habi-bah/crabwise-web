@@ -19,6 +19,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- Messaging transcripts keep the reader's place when older history is prepended, and only follow new messages
+  for readers who are already at the bottom; loading, failed and empty conversations are now distinct states
+  (#97, #100).
+- Message link previews use the shared external-URL policy, so only supported schemes become links and anything
+  else stays inert text (#98).
+- Message bodies render markup as literal text and drop invisible control/bidi characters that could disguise
+  what is shown (#99).
 - README scripts table now lists every script and describes `type-check` accurately.
 - The message sanitizer now removes whole `<script>`/`<style>` elements, so their contents can
   no longer survive as message text; the contact and query forms also reject bodies that are
