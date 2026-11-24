@@ -182,6 +182,7 @@ export default function MultiStepListingWizard({
   }
 
   const handleSubmit = async (publish: boolean) => {
+    if (isSubmitting) return
     if (!validateAll()) return
     setIsSubmitting(true)
     try {
@@ -423,6 +424,7 @@ export default function MultiStepListingWizard({
                 type="button"
                 variant="secondary"
                 isLoading={isSubmitting || saveDraftMutation.isPending || updateDraftMutation.isPending}
+                disabled={isSubmitting || saveDraftMutation.isPending || updateDraftMutation.isPending}
                 onClick={() => handleSubmit(false)}
               >
                 Save as Draft
@@ -430,6 +432,7 @@ export default function MultiStepListingWizard({
               <Button
                 type="button"
                 isLoading={isSubmitting || createMutation.isPending || updateMutation.isPending}
+                disabled={isSubmitting || createMutation.isPending || updateMutation.isPending}
                 onClick={() => handleSubmit(true)}
               >
                 Publish
