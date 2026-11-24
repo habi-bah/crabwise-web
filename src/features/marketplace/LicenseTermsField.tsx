@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { LICENSE_PRESETS } from './constants'
 
 interface LicenseTermsFieldProps {
@@ -46,6 +46,13 @@ export default function LicenseTermsField({
     const preset = LICENSE_PRESETS.find((p) => p.value === value)
     return preset ? '' : value
   })
+
+  useEffect(() => {
+    const preset = LICENSE_PRESETS.find((p) => p.value === value)
+    setSelectedPreset(preset?.value ?? null)
+    setIsCustom(!preset)
+    setCustomTerms(preset ? '' : value)
+  }, [value])
 
   const handlePresetChange = (presetValue: string) => {
     const preset = LICENSE_PRESETS.find((p) => p.value === presetValue)
