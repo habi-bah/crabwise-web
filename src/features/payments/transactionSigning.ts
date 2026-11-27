@@ -23,8 +23,8 @@ export function createSigningRequestLock(): SigningRequestLock {
 
 const STELLAR_ERROR_MESSAGES: { match: RegExp; message: string }[] = [
   {
-    match: /rejected|canceled by user|declined/i,
-    message: 'You declined the transaction in your wallet.',
+    match: /reject(ed)?|cancel(?:l)?(?:ed|ation)?|canceled by user|declined|denied|user rejection/i,
+    message: 'Transaction signing was cancelled. No payment was made.',
   },
   {
     match: /insufficient balance|underfunded/i,
@@ -73,6 +73,14 @@ export function mapStellarError(err: unknown): string {
   return known
     ? known.message
     : 'The payment could not be completed. Nothing was charged — please try again.'
+}
+
+/** True when the wallet declined or cancelled the signature request. */
+export function isSigningCancellation(err: unknown): boolean {
+  const raw = err instanceof Error ? err.message : String(err ?? '')
+  return /reject(ed)?|cancel(?:l)?(?:ed|ation)?|canceled by user|declined|denied|user rejection/i.test(
+    raw,
+  )
 }
 
 // ---------------------------------------------------------------------------
