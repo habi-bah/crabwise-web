@@ -1,4 +1,9 @@
-import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig } from 'axios'
+import axios, {
+  AxiosError,
+  type AxiosInstance,
+  type AxiosRequestConfig,
+  type AxiosResponse,
+} from 'axios'
 import { env } from '@/config'
 import { redactUrl } from '@/lib/url'
 import type { ApiErrorDto } from '@/types/api'
@@ -345,4 +350,25 @@ function buildClient(): AxiosInstance {
   )
 
   return client
+}
+
+/** Typed wrapper around the shared axios client. Resolves to the response body. */
+export interface Http {
+  get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T>
+  post<T = unknown>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<T>
+  patch<T = unknown>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<T>
+  delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T>
+}
+
+const client = buildClient()
+
+function body<T>(request: Promise<AxiosResponse<T>>): Promise<T> {
+  return request.then((response) => response.data)
+}
+
+export const http: Http = {
+  get: (url, config) => body(client.get(url, config)),
+  post: (url, data, config) => body(client.post(url, data, config)),
+  patch: (url, data, config) => body(client.patch(url, data, config)),
+  delete: (url, config) => body(client.delete(url, config)),
 }

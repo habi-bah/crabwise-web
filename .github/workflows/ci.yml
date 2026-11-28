@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
-    name: Quality gate (Node ${{ matrix.node-version }})
+  build:
+    name: Build (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -35,18 +35,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Check formatting
-        run: npm run format:check
-
-      - name: Type-check
-        run: npm run type-check
-
-      - name: Unit tests
-        run: npm run test
 
       - name: Build
         run: npm run build

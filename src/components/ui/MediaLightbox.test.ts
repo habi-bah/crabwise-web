@@ -48,6 +48,8 @@ describe('media lightbox helpers', () => {
     // This is a contract test: if the attribute is removed the test fails.
     const ariaLiveValue = 'polite'
     expect(ariaLiveValue).toBe('polite')
+  })
+
   it('getAdjacentIndices does not produce invalid indexes for an empty collection', () => {
     const result = getAdjacentIndices(0, 0)
     expect(result.previous).toBeGreaterThanOrEqual(0)
