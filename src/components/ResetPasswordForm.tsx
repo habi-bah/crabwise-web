@@ -1,14 +1,9 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Button, Input } from '@/components/ui'
 import { authApi } from '@/features/auth'
 import { validateEmail } from '@/lib/email'
-import {
-  passwordSchema,
-  resetPasswordSchema,
-  type ResetPasswordFormValues,
-} from '@/features/auth'
+import { resetPasswordSchema, type ResetPasswordFormValues } from '@/features/auth'
 import { useFormSubmission } from '@/hooks/useFormSubmission'
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 
 /**
  * Reset-password form: request a reset link by email and then choose a new

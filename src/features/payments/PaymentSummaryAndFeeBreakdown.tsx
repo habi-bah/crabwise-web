@@ -80,15 +80,6 @@ export default function PaymentSummaryAndFeeBreakdown({
     return items
   }, [price, asset, platformFeePercent, networkFeeEstimate, discount, precision])
 
-  const formatAmount = (amount: string) => {
-    const num = Number(amount)
-    const safe = Number.isFinite(num) ? num : 0
-    const sign = safe < 0 ? '-' : ''
-    const abs = Math.abs(safe).toLocaleString(undefined, {
-      minimumFractionDigits: precision,
-      maximumFractionDigits: precision,
-    })
-    return `${sign}${symbol}${abs}`
   const formatAmount = (amount: string, amountAsset: string) => {
     const amountMeta = getAssetMeta(amountAsset)
     const amountPrecision = amountMeta?.precision ?? DISPLAY_FALLBACK_PRECISION
