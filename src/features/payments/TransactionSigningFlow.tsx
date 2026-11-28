@@ -6,7 +6,12 @@ import { activeStellarNetwork, STELLAR_NETWORK_LABELS } from '@/config'
 import { useWallet } from '@/features/auth/hooks/useWallet'
 import { signWithConnectedWallet } from '@/features/auth/services/wallets'
 import { getWalletConnection } from '@/features/auth/stores/walletStore'
-import { createSigningRequestLock, isNetworkMismatch, mapStellarError } from './transactionSigning'
+import {
+  createSigningRequestLock,
+  isNetworkMismatch,
+  isSigningCancellation,
+  mapStellarError,
+} from './transactionSigning'
 import { shortAddress } from '@/lib'
 
 interface TransactionSigningFlowProps {
@@ -27,6 +32,7 @@ type SigningStep =
   | 'submitting'
   | 'completed'
   | 'failed'
+  | 'cancelled'
   // Paused rather than failed: the prepared XDR is still valid once the
   // wallet comes back, so the flow resumes instead of restarting.
   | 'paused'
@@ -212,8 +218,8 @@ export default function TransactionSigningFlow({
     } catch (err) {
       if (generation !== sessionGeneration.current) return
       const message = mapStellarError(err)
-      if (/declined/i.test(message)) {
-        setStep('failed')
+      if (isSigningCancellation(err)) {
+        setStep('cancelled')
         setError(message)
         onReject?.()
       } else {
@@ -286,6 +292,7 @@ export default function TransactionSigningFlow({
     submitting: 'Pending — submitting to network…',
     completed: 'Transaction submitted!',
     failed: 'Signing failed',
+    cancelled: 'Signing cancelled',
     paused: 'Paused — waiting for your wallet',
   }
 
@@ -370,7 +377,8 @@ export default function TransactionSigningFlow({
             variant="ghost"
             className="w-full"
             onClick={() => {
-              setStep('failed')
+              setStep('cancelled')
+              setError('Transaction signing was cancelled. No payment was made.')
               onReject?.()
             }}
           >
@@ -430,6 +438,43 @@ export default function TransactionSigningFlow({
               <code className="font-mono text-caption-sm break-all">{currentTxHash}</code>
             </div>
           )}
+        </div>
+      )}
+
+      {currentStep === 'cancelled' && (
+        <div className="flex flex-col items-center gap-4 py-8 text-center">
+          <div className="h-16 w-16 rounded-full bg-surface-muted flex items-center justify-center">
+            <svg
+              className="h-8 w-8 text-muted"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+          </div>
+          <h3 className="text-h3">Signing Cancelled</h3>
+          <p className="text-caption text-muted">
+            {currentError ?? 'Transaction signing was cancelled. No payment was made.'}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs">
+            <Button
+              className="flex-1"
+              onClick={() => {
+                setStep('waiting_for_wallet')
+                setError(null)
+              }}
+            >
+              Try Again
+            </Button>
+            <Button variant="ghost" className="flex-1" onClick={onReject}>
+              Cancel
+            </Button>
+          </div>
         </div>
       )}
 
